@@ -43,4 +43,4 @@ Rust · Clap · Serde · SHA2 · GitHub Actions
 
 ## 📜 License
 
-MIT © [Reem Abdullah](https://linkedin.com/in/reemabdullah)
+MIT © [Reem Abdullah](https://github.com/reemabdullah) · [LinkedIn](https://linkedin.com/in/reemalsobaiee)
