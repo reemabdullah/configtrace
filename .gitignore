@@ -1,0 +1,4 @@
+target/
+**/*.log
+*.sqlite
+*.DS_Store
