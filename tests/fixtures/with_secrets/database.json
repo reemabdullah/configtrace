@@ -1,0 +1,10 @@
+{
+  "database": {
+    "connection_string": "postgres://admin:SuperSecret123@db.example.com:5432/mydb",
+    "pool_size": 10
+  },
+  "api": {
+    "api_key": "sk_live_1234567890abcdefghij",
+    "timeout": 30
+  }
+}

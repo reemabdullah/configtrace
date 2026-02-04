@@ -1,0 +1,13 @@
+[server]
+name = "production"
+
+[credentials]
+password = "MyP@ssw0rd123"
+
+[ssh]
+private_key = """
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA0Z3VS...
+(truncated for testing)
+-----END RSA PRIVATE KEY-----
+"""
