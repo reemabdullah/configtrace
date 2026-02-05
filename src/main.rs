@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 
 mod diff;
 mod models;
+mod policy;
 mod report;
 mod scan;
 mod secrets;
@@ -39,6 +40,34 @@ enum Commands {
         #[arg(long)]
         output: Option<String>,
     },
+    /// Check configuration files against a policy
+    Policy {
+        #[command(subcommand)]
+        action: PolicyAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum PolicyAction {
+    /// Validate configs against a policy file
+    Check {
+        /// Path to directory or file to check
+        path: String,
+        /// Path to the policy YAML file
+        #[arg(long)]
+        policy: String,
+        /// Output format: text or json
+        #[arg(long, default_value = "text")]
+        format: String,
+        /// Write output to file instead of stdout
+        #[arg(long)]
+        output: Option<String>,
+    },
+    /// Validate a policy file without running checks
+    Validate {
+        /// Path to the policy YAML file
+        policy: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -54,9 +83,28 @@ fn main() -> Result<()> {
         } => {
             let has_secrets = secrets::scan_for_secrets(&path, &format, output.as_deref())?;
             if has_secrets {
-                std::process::exit(1); // Exit with code 1 if secrets found
+                std::process::exit(1);
             }
         }
+        Commands::Policy { action } => match action {
+            PolicyAction::Check {
+                path,
+                policy: policy_path,
+                format,
+                output,
+            } => {
+                let has_violations =
+                    policy::check_policy(&path, &policy_path, &format, output.as_deref())?;
+                if has_violations {
+                    std::process::exit(1);
+                }
+            }
+            PolicyAction::Validate {
+                policy: policy_path,
+            } => {
+                policy::validate_policy_file(&policy_path)?;
+            }
+        },
     }
     Ok(())
 }

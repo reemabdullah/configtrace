@@ -1,0 +1,45 @@
+name: "production-security"
+description: "Security policies for production configurations"
+rules:
+  - id: no-debug-mode
+    description: "Debug mode must be disabled in production"
+    severity: critical
+    check:
+      type: forbidden_value
+      key: "debug"
+      value: "true"
+
+  - id: require-logging-level
+    description: "Logging level must be configured"
+    severity: high
+    check:
+      type: required_key
+      key: "logging.level"
+
+  - id: valid-log-level
+    description: "Log level must be one of the standard values"
+    severity: medium
+    check:
+      type: value_enum
+      key: "logging.level"
+      values:
+        - "info"
+        - "warn"
+        - "error"
+
+  - id: no-localhost-db
+    description: "Database host must not be localhost"
+    severity: high
+    check:
+      type: forbidden_value
+      key: "database.host"
+      value: "localhost"
+
+  - id: eu-region-only
+    description: "Only EU regions are permitted"
+    severity: critical
+    pattern: "*.yaml"
+    check:
+      type: value_match
+      key: "aws.region"
+      regex: "^eu-(west|north)-[12]$"

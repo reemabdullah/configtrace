@@ -30,6 +30,13 @@ configtrace report --snapshot snapshot.json --out report.md
 # Scan for exposed secrets
 configtrace secrets ./infra
 configtrace secrets ./infra --format=json --output=secrets.json
+
+# Check configs against a policy
+configtrace policy check ./infra --policy production.yaml
+configtrace policy check ./infra --policy production.yaml --format json
+
+# Validate a policy file
+configtrace policy validate production.yaml
 ```
 
 ---
@@ -52,11 +59,13 @@ ConfigTrace includes built-in secret detection to identify exposed credentials i
 ### Output Formats
 
 **Terminal (colorized):**
+
 ```bash
 configtrace secrets ./infra
 ```
 
 **JSON (for automation):**
+
 ```bash
 configtrace secrets ./infra --format=json --output=secrets.json
 ```
@@ -66,6 +75,67 @@ configtrace secrets ./infra --format=json --output=secrets.json
 - `0` - No secrets found
 - `1` - Secrets detected
 - `2` - Error (file not found, permissions, etc.)
+
+---
+
+## 📋 Policy Engine
+
+Define security and governance rules in YAML policy files and validate configs against them.
+
+### Rule Types
+
+| Type              | Description                         |
+| ----------------- | ----------------------------------- |
+| `required_key`    | A key must exist in the config      |
+| `forbidden_key`   | A key must NOT exist                |
+| `value_match`     | Value must match a regex pattern    |
+| `value_enum`      | Value must be one of allowed values |
+| `forbidden_value` | A specific key=value must not exist |
+
+### Example Policy File
+
+```yaml
+name: "production-security"
+description: "Security policies for production"
+rules:
+  - id: no-debug-mode
+    description: "Debug must be disabled"
+    severity: critical
+    check:
+      type: forbidden_value
+      key: "debug"
+      value: "true"
+
+  - id: valid-log-level
+    description: "Log level must be standard"
+    severity: medium
+    check:
+      type: value_enum
+      key: "logging.level"
+      values: ["info", "warn", "error"]
+
+  - id: eu-region-only
+    description: "Only EU regions permitted"
+    severity: critical
+    pattern: "*.yaml"
+    check:
+      type: value_match
+      key: "aws.region"
+      regex: "^eu-(west|north)-[12]$"
+```
+
+### Severity Levels
+
+- **Critical** - Security-breaking violations
+- **High** - Important governance violations
+- **Medium** - Best-practice violations
+- **Low** - Informational findings
+
+### Exit Codes
+
+- `0` - All checks passed
+- `1` - Violations found
+- `2` - Error (invalid policy, parse failure)
 
 ---
 
@@ -81,7 +151,7 @@ A simple way to track and audit configuration drifts across GCP or Kubernetes wi
 
 ## 🧱 Stack
 
-Rust · Clap · Serde · SHA2 · Regex · Termcolor · GitHub Actions
+Rust · Clap · Serde · SHA2 · Regex · Termcolor · Serde YAML · TOML · GitHub Actions
 
 ---
 

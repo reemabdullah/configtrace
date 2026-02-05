@@ -1,0 +1,15 @@
+app:
+  name: DevService
+  version: 1.0.0
+
+debug: true
+
+logging:
+  level: trace
+
+database:
+  host: localhost
+  port: 5432
+
+aws:
+  region: us-west-1

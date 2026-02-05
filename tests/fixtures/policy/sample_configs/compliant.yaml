@@ -1,0 +1,17 @@
+app:
+  name: MyService
+  version: 2.0.0
+
+debug: false
+
+logging:
+  level: info
+  format: json
+
+database:
+  host: db.production.internal
+  port: 5432
+  name: myapp
+
+aws:
+  region: eu-west-1
