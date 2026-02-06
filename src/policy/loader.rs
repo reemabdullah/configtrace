@@ -1,4 +1,4 @@
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -18,7 +18,10 @@ pub fn load_policy(path: &Path) -> Result<PolicyFile> {
 
 /// Validate that the policy is well-formed.
 fn validate_policy(policy: &PolicyFile) -> Result<()> {
-    ensure!(!policy.rules.is_empty(), "Policy must contain at least one rule");
+    ensure!(
+        !policy.rules.is_empty(),
+        "Policy must contain at least one rule"
+    );
 
     let mut seen_ids = HashSet::new();
     for rule in &policy.rules {
@@ -36,8 +39,9 @@ fn validate_policy(policy: &PolicyFile) -> Result<()> {
 
         // Validate glob pattern if present
         if let Some(pattern) = &rule.pattern {
-            glob::Pattern::new(pattern)
-                .with_context(|| format!("Invalid glob pattern in rule '{}': {}", rule.id, pattern))?;
+            glob::Pattern::new(pattern).with_context(|| {
+                format!("Invalid glob pattern in rule '{}': {}", rule.id, pattern)
+            })?;
         }
     }
 
@@ -51,10 +55,7 @@ mod tests {
     use tempfile::NamedTempFile;
 
     fn write_policy_file(content: &str) -> NamedTempFile {
-        let mut file = tempfile::Builder::new()
-            .suffix(".yaml")
-            .tempfile()
-            .unwrap();
+        let mut file = tempfile::Builder::new().suffix(".yaml").tempfile().unwrap();
         file.write_all(content.as_bytes()).unwrap();
         file
     }
@@ -90,7 +91,12 @@ rules: []
         );
         let result = load_policy(file.path());
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("at least one rule"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("at least one rule")
+        );
     }
 
     #[test]
@@ -111,7 +117,12 @@ rules:
         );
         let result = load_policy(file.path());
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Duplicate rule id"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Duplicate rule id")
+        );
     }
 
     #[test]

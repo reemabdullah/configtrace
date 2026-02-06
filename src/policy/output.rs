@@ -50,7 +50,11 @@ pub fn output_terminal(report: &PolicyReport) -> Result<()> {
             write!(&mut stdout, "  ")?;
             write_severity(&mut stdout, &violation.severity)?;
             stdout.reset()?;
-            writeln!(&mut stdout, " [{}]: {}", violation.rule_id, violation.message)?;
+            writeln!(
+                &mut stdout,
+                " [{}]: {}",
+                violation.rule_id, violation.message
+            )?;
             if let Some(desc) = &violation.rule_description {
                 writeln!(&mut stdout, "    Rule: {}", desc)?;
             }

@@ -2,33 +2,37 @@ use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::Path;
 
-/// Parse a config file (YAML/JSON/TOML) into a flat key-value map.
-/// Nested keys are joined with dots: `database.host = "localhost"`
-pub fn parse_config_file(path: &Path) -> Result<HashMap<String, String>> {
-    let content = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read config file: {}", path.display()))?;
-
-    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
-
-    let value: serde_json::Value = match ext {
+/// Parse config content from a string into a flat key-value map.
+/// Used by git integration to parse in-memory content from git blobs.
+pub fn parse_config_content(content: &str, extension: &str) -> Result<HashMap<String, String>> {
+    let value: serde_json::Value = match extension {
         "yaml" | "yml" => {
-            let yaml_val: serde_yaml::Value = serde_yaml::from_str(&content)
-                .with_context(|| format!("Failed to parse YAML: {}", path.display()))?;
+            let yaml_val: serde_yaml::Value =
+                serde_yaml::from_str(content).context("Failed to parse YAML content")?;
             serde_json::to_value(yaml_val)?
         }
-        "json" => serde_json::from_str(&content)
-            .with_context(|| format!("Failed to parse JSON: {}", path.display()))?,
+        "json" => serde_json::from_str(content).context("Failed to parse JSON content")?,
         "toml" => {
-            let toml_val: toml::Value = toml::from_str(&content)
-                .with_context(|| format!("Failed to parse TOML: {}", path.display()))?;
+            let toml_val: toml::Value =
+                toml::from_str(content).context("Failed to parse TOML content")?;
             serde_json::to_value(toml_val)?
         }
-        _ => anyhow::bail!("Unsupported config format: {}", ext),
+        _ => anyhow::bail!("Unsupported config format: {}", extension),
     };
 
     let mut map = HashMap::new();
     flatten("", &value, &mut map);
     Ok(map)
+}
+
+/// Parse a config file (YAML/JSON/TOML) into a flat key-value map.
+/// Nested keys are joined with dots: `database.host = "localhost"`
+pub fn parse_config_file(path: &Path) -> Result<HashMap<String, String>> {
+    let content = std::fs::read_to_string(path)
+        .with_context(|| format!("Failed to read config file: {}", path.display()))?;
+    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
+    parse_config_content(&content, ext)
+        .with_context(|| format!("Failed to parse: {}", path.display()))
 }
 
 /// Recursively flatten a serde_json::Value into dot-notation keys.
@@ -82,10 +86,7 @@ mod tests {
 
     #[test]
     fn test_flatten_yaml() {
-        let file = write_temp_file(
-            "database:\n  host: localhost\n  port: 5432\n",
-            "yaml",
-        );
+        let file = write_temp_file("database:\n  host: localhost\n  port: 5432\n", "yaml");
         let map = parse_config_file(file.path()).unwrap();
         assert_eq!(map.get("database.host").unwrap(), "localhost");
         assert_eq!(map.get("database.port").unwrap(), "5432");
@@ -93,10 +94,7 @@ mod tests {
 
     #[test]
     fn test_flatten_json() {
-        let file = write_temp_file(
-            r#"{"app": {"name": "test", "debug": true}}"#,
-            "json",
-        );
+        let file = write_temp_file(r#"{"app": {"name": "test", "debug": true}}"#, "json");
         let map = parse_config_file(file.path()).unwrap();
         assert_eq!(map.get("app.name").unwrap(), "test");
         assert_eq!(map.get("app.debug").unwrap(), "true");
@@ -104,10 +102,7 @@ mod tests {
 
     #[test]
     fn test_flatten_toml() {
-        let file = write_temp_file(
-            "[server]\nname = \"prod\"\nport = 8080\n",
-            "toml",
-        );
+        let file = write_temp_file("[server]\nname = \"prod\"\nport = 8080\n", "toml");
         let map = parse_config_file(file.path()).unwrap();
         assert_eq!(map.get("server.name").unwrap(), "prod");
         assert_eq!(map.get("server.port").unwrap(), "8080");
@@ -115,20 +110,14 @@ mod tests {
 
     #[test]
     fn test_flatten_deeply_nested() {
-        let file = write_temp_file(
-            r#"{"a": {"b": {"c": {"d": "deep"}}}}"#,
-            "json",
-        );
+        let file = write_temp_file(r#"{"a": {"b": {"c": {"d": "deep"}}}}"#, "json");
         let map = parse_config_file(file.path()).unwrap();
         assert_eq!(map.get("a.b.c.d").unwrap(), "deep");
     }
 
     #[test]
     fn test_flatten_array() {
-        let file = write_temp_file(
-            r#"{"servers": [{"host": "a"}, {"host": "b"}]}"#,
-            "json",
-        );
+        let file = write_temp_file(r#"{"servers": [{"host": "a"}, {"host": "b"}]}"#, "json");
         let map = parse_config_file(file.path()).unwrap();
         assert_eq!(map.get("servers[0].host").unwrap(), "a");
         assert_eq!(map.get("servers[1].host").unwrap(), "b");

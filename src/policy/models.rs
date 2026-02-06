@@ -68,7 +68,7 @@ pub enum CheckDefinition {
 // ========== Evaluation Results (for output) ==========
 
 /// A single violation produced when a rule check fails.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Violation {
     pub rule_id: String,
     pub rule_description: Option<String>,

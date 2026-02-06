@@ -1,8 +1,8 @@
-mod evaluator;
-mod loader;
+pub(crate) mod evaluator;
+pub(crate) mod loader;
 pub mod models;
 mod output;
-mod parser;
+pub(crate) mod parser;
 
 use anyhow::Result;
 use std::path::Path;
@@ -29,7 +29,11 @@ pub fn check_policy(
 /// Validate a policy file without running checks.
 pub fn validate_policy_file(policy_path: &str) -> Result<()> {
     let policy = loader::load_policy(Path::new(policy_path))?;
-    println!("Policy '{}' is valid ({} rules)", policy.name, policy.rules.len());
+    println!(
+        "Policy '{}' is valid ({} rules)",
+        policy.name,
+        policy.rules.len()
+    );
     for rule in &policy.rules {
         println!(
             "  - [{}] {} ({})",

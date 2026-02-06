@@ -37,6 +37,18 @@ configtrace policy check ./infra --policy production.yaml --format json
 
 # Validate a policy file
 configtrace policy validate production.yaml
+
+# Show config change history across git commits
+configtrace git log
+configtrace git log src/configs/ --limit 20
+
+# Compare configs between two git refs at the key level
+configtrace git diff HEAD~3 HEAD
+configtrace git diff main feature-branch src/configs/
+
+# Git commands with policy audit
+configtrace git log --policy production.yaml
+configtrace git diff v1.0 v2.0 --policy production.yaml --format json
 ```
 
 ---
@@ -139,6 +151,65 @@ rules:
 
 ---
 
+## 🔀 Git Integration
+
+Track config changes across git history at the **key level** — see exactly which config keys were added, removed, or changed in each commit.
+
+### Git Log
+
+Show config change history across recent commits:
+
+```bash
+configtrace git log
+configtrace git log src/configs/ --limit 20
+```
+
+Output shows per-commit, per-file, per-key changes:
+
+```
+abc1234 - Update database config (Alice, 2025-01-15)
+  File: config/database.yaml
+    ~ database.host: localhost -> db.prod.internal
+    + database.pool_size = 20
+```
+
+### Git Diff
+
+Compare configs between two git refs (commits, branches, tags):
+
+```bash
+configtrace git diff HEAD~3 HEAD
+configtrace git diff main feature-branch src/configs/
+```
+
+### Policy Audit on Git History
+
+Use `--policy` to check historical configs against policy rules:
+
+```bash
+configtrace git log --policy production.yaml
+configtrace git diff v1.0 v2.0 --policy production.yaml
+```
+
+Violations are shown inline and exit code is `1` when violations are found.
+
+### Output Formats
+
+Both commands support `--format json` and `--output file`:
+
+```bash
+configtrace git log --format json --output git-log.json
+configtrace git diff HEAD~1 HEAD --format json
+```
+
+### Exit Codes
+
+- `0` - No policy violations (or no `--policy` flag)
+- `1` - Policy violations found
+- `2` - Error (not a git repo, invalid ref, etc.)
+
+---
+
 ## 💡 Why
 
 ConfigTrace helps answer:
@@ -151,7 +222,7 @@ A simple way to track and audit configuration drifts across GCP or Kubernetes wi
 
 ## 🧱 Stack
 
-Rust · Clap · Serde · SHA2 · Regex · Termcolor · Serde YAML · TOML · GitHub Actions
+Rust · Clap · Serde · SHA2 · Regex · Termcolor · Serde YAML · TOML · Git2 · GitHub Actions
 
 ---
 

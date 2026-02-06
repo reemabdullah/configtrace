@@ -77,7 +77,7 @@ pub fn evaluate_policy(path: &str, policy: &PolicyFile) -> Result<PolicyReport> 
 }
 
 /// Check if a rule's glob pattern matches the given file path.
-fn rule_applies_to_file(rule: &RuleDefinition, file_path: &Path) -> bool {
+pub(crate) fn rule_applies_to_file(rule: &RuleDefinition, file_path: &Path) -> bool {
     match &rule.pattern {
         None => true,
         Some(pat) => {
@@ -97,7 +97,7 @@ fn rule_applies_to_file(rule: &RuleDefinition, file_path: &Path) -> bool {
 
 /// Evaluate a single rule against a flattened config map.
 /// Returns Some(Violation) if the rule is violated, None if compliant.
-fn evaluate_rule(
+pub(crate) fn evaluate_rule(
     rule: &RuleDefinition,
     file_path: &Path,
     flat_map: &HashMap<String, String>,
