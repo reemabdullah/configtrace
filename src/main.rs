@@ -27,11 +27,19 @@ enum Commands {
     },
     /// Compare two snapshots and print a simple diff
     Diff { old: String, new: String },
-    /// Generate a Markdown report from a snapshot
+    /// Generate a unified audit report (inventory, secrets, policy, git)
     Report {
-        snapshot: String,
-        #[arg(long, default_value = "report.md")]
-        out: String,
+        /// Path to directory to audit
+        path: String,
+        /// Path to policy file for policy evaluation
+        #[arg(long)]
+        policy: Option<String>,
+        /// Output format: text, json, or markdown
+        #[arg(long, default_value = "text")]
+        format: String,
+        /// Write output to file instead of stdout
+        #[arg(long)]
+        output: Option<String>,
     },
     /// Scan for secrets in configuration files
     Secrets {
@@ -120,7 +128,18 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Scan { path, out } => scan::scan(&path, &out)?,
         Commands::Diff { old, new } => diff::diff(&old, &new)?,
-        Commands::Report { snapshot, out } => report::report(&snapshot, &out)?,
+        Commands::Report {
+            path,
+            policy,
+            format,
+            output,
+        } => {
+            let is_fail =
+                report::generate_report(&path, policy.as_deref(), &format, output.as_deref())?;
+            if is_fail {
+                std::process::exit(1);
+            }
+        }
         Commands::Secrets {
             path,
             format,

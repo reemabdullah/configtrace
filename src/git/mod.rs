@@ -1,5 +1,5 @@
 mod differ;
-mod models;
+pub(crate) mod models;
 mod output;
 mod repo;
 
@@ -8,6 +8,110 @@ use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
 use crate::policy;
+
+/// Collect config change history data without outputting.
+/// Used by the report module for unified audit reports.
+pub fn collect_log(path_filter: Option<&str>, limit: usize) -> Result<models::GitLogReport> {
+    let repository = repo::open_repo()?;
+    let oids = repo::walk_commits(&repository, limit)?;
+    let mut commit_results = Vec::new();
+
+    for oid in &oids {
+        let commit = repository.find_commit(*oid)?;
+        let tree = commit.tree()?;
+
+        let config_files = repo::list_config_files_in_tree(&repository, &tree, path_filter)?;
+
+        let parent = commit.parent(0).ok();
+        let parent_tree = parent.as_ref().and_then(|p| p.tree().ok());
+
+        let parent_config_files = match &parent_tree {
+            Some(pt) => repo::list_config_files_in_tree(&repository, pt, path_filter)?,
+            None => Vec::new(),
+        };
+
+        let mut file_changes_list = Vec::new();
+
+        for file_path in &config_files {
+            let ext = Path::new(file_path)
+                .extension()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+
+            let new_content = repo::get_file_content_at_commit(&repository, &commit, file_path)?;
+            let old_content = match &parent {
+                Some(p) => repo::get_file_content_at_commit(&repository, p, file_path)?,
+                None => None,
+            };
+
+            let new_map = new_content
+                .as_ref()
+                .and_then(|c| policy::parser::parse_config_content(c, ext).ok());
+            let old_map = old_content
+                .as_ref()
+                .and_then(|c| policy::parser::parse_config_content(c, ext).ok());
+
+            let empty = HashMap::new();
+            let changes = differ::diff_config_maps(
+                old_map.as_ref().unwrap_or(&empty),
+                new_map.as_ref().unwrap_or(&empty),
+            );
+
+            if changes.is_empty() {
+                continue;
+            }
+
+            file_changes_list.push(build_file_changes(file_path, changes, Vec::new()));
+        }
+
+        // Check for deleted files (in parent but not in current)
+        for file_path in &parent_config_files {
+            if config_files.contains(file_path) {
+                continue;
+            }
+            let ext = Path::new(file_path)
+                .extension()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+
+            if let Some(p) = &parent
+                && let Some(content) = repo::get_file_content_at_commit(&repository, p, file_path)?
+                && let Ok(old_map) = policy::parser::parse_config_content(&content, ext)
+            {
+                let changes = differ::diff_config_maps(&old_map, &HashMap::new());
+                if !changes.is_empty() {
+                    file_changes_list.push(build_file_changes(file_path, changes, Vec::new()));
+                }
+            }
+        }
+
+        if !file_changes_list.is_empty() {
+            let sig = commit.author();
+            let date = chrono::DateTime::from_timestamp(sig.when().seconds(), 0)
+                .map(|dt| dt.to_rfc3339())
+                .unwrap_or_default();
+
+            commit_results.push(models::CommitConfigChanges {
+                commit_hash: format!("{:.7}", commit.id()),
+                commit_hash_full: commit.id().to_string(),
+                author: sig.name().unwrap_or("unknown").to_string(),
+                date,
+                message: commit.message().unwrap_or("").trim().to_string(),
+                files: file_changes_list,
+            });
+        }
+    }
+
+    Ok(models::GitLogReport {
+        repository: repository
+            .workdir()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default(),
+        path_filter: path_filter.map(String::from),
+        commits_analyzed: commit_results.len(),
+        commits: commit_results,
+    })
+}
 
 /// Analyze config change history across git commits.
 /// Returns true if policy violations were found (for exit code 1).

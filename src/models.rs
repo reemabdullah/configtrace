@@ -42,13 +42,13 @@ pub struct SecretFinding {
     pub matched_pattern: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FileSecrets {
     pub path: String,
     pub findings: Vec<SecretFinding>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SecretReport {
     pub scanned_at: String,
     pub total_files: usize,

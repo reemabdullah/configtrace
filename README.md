@@ -24,8 +24,11 @@ configtrace scan ./infra --out snapshot.json
 # Compare two snapshots
 configtrace diff old.json new.json
 
-# Generate Markdown report
-configtrace report --snapshot snapshot.json --out report.md
+# Generate unified audit report (inventory, secrets, policy, git)
+configtrace report ./infra
+configtrace report ./infra --policy production.yaml
+configtrace report ./infra --format markdown --output audit.md
+configtrace report ./infra --format json --output audit.json
 
 # Scan for exposed secrets
 configtrace secrets ./infra
@@ -207,6 +210,43 @@ configtrace git diff HEAD~1 HEAD --format json
 - `0` - No policy violations (or no `--policy` flag)
 - `1` - Policy violations found
 - `2` - Error (not a git repo, invalid ref, etc.)
+
+---
+
+## 📊 Unified Audit Report
+
+Generate a comprehensive security audit report that combines all analysis into a single view:
+
+- **Config Inventory** — all files with SHA256 hashes
+- **Secret Findings** — exposed credentials with severity
+- **Policy Violations** — governance rule failures (with `--policy`)
+- **Recent Git Changes** — last 5 commits that touched configs
+- **Risk Summary** — overall PASS/WARN/FAIL status
+
+```bash
+# Terminal output (default)
+configtrace report ./configs
+
+# With policy evaluation
+configtrace report ./configs --policy production.yaml
+
+# Markdown for documentation
+configtrace report ./configs --format markdown --output audit.md
+
+# JSON for CI/CD pipelines
+configtrace report ./configs --format json --output audit.json
+```
+
+### Risk Levels
+
+- **PASS** — No issues found
+- **WARN** — Non-critical findings (high secrets, medium policy violations)
+- **FAIL** — Critical secrets or policy violations detected
+
+### Exit Codes
+
+- `0` — PASS
+- `1` — FAIL (critical findings)
 
 ---
 
